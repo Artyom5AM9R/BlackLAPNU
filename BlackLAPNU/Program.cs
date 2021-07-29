@@ -36,22 +36,14 @@ namespace BlackLAPNU
                 {                    
                     node.GetNameOfLaunchingOrgan(sheetTRP, startingLine, newBookTPNBU.Worksheets["ПО и ПС"]);
 
-                    while (counterScheme < 3/*node.GetCountOfParams(sheetTRP, currentLine, (int)ColumnNumberInTRP.LaunchingOrgan)*/)
+                    while (counterScheme < node.GetCountOfParams(sheetTRP, currentLine, (int)ColumnNumberInTRP.LaunchingOrgan))
                     {
                         var groupCount = node.GetTemperatureGroupCount(sheetTRP, currentLine/*startingLine - 2*/);
                         var counterTempGroup = 0;
-                        /*if (!node.CheckValuesGroups(sheetTRP, currentLine, node.GetMergeLineCount(sheetTRP, currentLine, (int)ColumnNumberInTRP.SchemeOfTheNetwork), sheetTRP.Cells[currentLine, (int)ColumnNumberInTRP.SchemeOfTheNetwork].Value))
-                        {
-                            Console.WriteLine("\nВсё оки!\n");
-                        }
-                        else
-                        {
-                            throw new Exception("Беда!");
-                        }*/
 
                         node.CheckValuesGroups(sheetTRP, currentLine, node.GetMergeLineCount(sheetTRP, currentLine, (int)ColumnNumberInTRP.SchemeOfTheNetwork), sheetTRP.Cells[currentLine, (int)ColumnNumberInTRP.SchemeOfTheNetwork].Value);
 
-                            Console.WriteLine("Количество групп - " + groupCount);
+                        Console.WriteLine("Количество групп - " + groupCount);
                         while (counterTempGroup < groupCount)
                         {
                             node.GetNetworkScheme(sheetTRP, currentLine, newBookTPNBU, tempGroupList, nodeList, groupCount);
@@ -95,11 +87,12 @@ namespace BlackLAPNU
                             if (sheetTRP.Cells[currentLine, columnIndex].MergeCells && groupCount > 1)
                             {
                                 var cnt = 0;
-
-                                while (cnt < sheetTRP.Cells[newCurrentLine, columnIndex].MergeArea.Count)
+                                Console.WriteLine("Количество объединенных ячеек - " + sheetTRP.Cells[currentLine, columnIndex].MergeArea.Count);
+                                while (cnt < sheetTRP.Cells[currentLine, columnIndex].MergeArea.Count - 1)
                                 {
                                     var countCells = nodeList.Count - node.GetCountOfParams(sheetTRP, currentLine, (int)ColumnNumberInTRP.SchemeOfTheNetwork);
-                                    Console.WriteLine("\ncountCells = " + countCells); ;
+                                    Console.WriteLine("\ncountCells = " + countCells);
+                                    Console.WriteLine("nodeListCells = " + nodeList.Count);
                                     for (int i = countCells; i < nodeList.Count; i++)
                                     {
                                         Console.WriteLine("Запись №" + i);
@@ -111,6 +104,7 @@ namespace BlackLAPNU
                                         blank.Values = nodeList[i].Values;
                                         blank.ControlActions = nodeList[i].ControlActions;
                                         copyList.Add(blank);
+                                        Console.WriteLine("\ncopyListCells = " + copyList.Count);
                                     }
 
                                     Console.WriteLine("Кол-во скопированных записей: " + copyList.Count);
@@ -124,7 +118,9 @@ namespace BlackLAPNU
                                     Console.WriteLine(blankNode.LaunchingOrganFullName);
                                     blankNode.LaunchingOrganOperationName = nodeList[nodeList.Count - 1].LaunchingOrganOperationName;
                                     Console.WriteLine(blankNode.LaunchingOrganOperationName);
-                                    blankNode.TemperatureGroup = /*nodeList[nodeList.Count - 1].TemperatureGroup*/ tempGroupList[1];
+
+                                    var groupIndex = tempGroupList.IndexOf(blankNode.TemperatureGroup) + 1;
+                                    blankNode.TemperatureGroup = /*nodeList[nodeList.Count - 1].TemperatureGroup*/ tempGroupList[groupIndex];
                                     Console.WriteLine(blankNode.TemperatureGroup);
                                     blankNode.ControlledSection = nodeList[nodeList.Count - 1].ControlledSection;
                                     Console.WriteLine(blankNode.ControlledSection);
@@ -137,13 +133,24 @@ namespace BlackLAPNU
                                     blankNode.GetNetworkScheme(sheetTRP, currentLine, newBookTPNBU, tempGroupList, nodeList, groupCount);
                                     Console.WriteLine("ПОСЛЕ: " + nodeList[nodeList.Count - 1].SchemeOfNetwork.ToString());
                                     Console.WriteLine("Новая схема: " + blankNode.SchemeOfNetwork);
-                                    foreach (var copyNode in copyList)
+                                    Console.WriteLine("\ncopyListCount = " + copyList.Count);
+
+                                    var newCountCells = copyList.Count - node.GetCountOfParams(sheetTRP, currentLine, (int)ColumnNumberInTRP.SchemeOfTheNetwork);
+
+                                    for (int i = newCountCells; i < copyList.Count; i++)
                                     {
-                                        Console.WriteLine("Пыхали со строкой - " + newLine);
+                                        /*Console.WriteLine("Пыхали со строкой - " + newLine);
                                         copyNode.TemperatureGroup = blankNode.TemperatureGroup;
                                         copyNode.SchemeOfNetwork = blankNode.SchemeOfNetwork;
                                         Console.WriteLine("Сразу после пыхали - " + copyNode.TemperatureGroup);
-                                        nodeList.Add(copyNode);
+                                        nodeList.Add(copyNode);*/
+
+                                        Console.WriteLine("Пыхали со строкой - " + newLine);
+                                        copyList[i].TemperatureGroup = blankNode.TemperatureGroup;
+                                        copyList[i].SchemeOfNetwork = blankNode.SchemeOfNetwork;
+                                        Console.WriteLine("Сразу после пыхали - " + copyList[i].TemperatureGroup);
+                                        nodeList.Add(copyList[i]);
+                                        Console.WriteLine("nodeListCells = " + nodeList.Count);
 
                                         newLine = newLine + node.GetMergeLineCount(sheetTRP, newLine, (int)ColumnNumberInTRP.ControlledSection);
                                     }
@@ -208,7 +215,7 @@ namespace BlackLAPNU
 
                 JoinCells(sheetTPNBU, (int)ColumnNumber.LaunchingOrganFullName, XlVAlign.xlVAlignTop);
                 JoinCells(sheetTPNBU, (int)ColumnNumber.LaunchingOrganOperationName, XlVAlign.xlVAlignTop);
-                sheetTPNBU.Range[sheetTPNBU.Cells[startingLine, 1], sheetTPNBU.Cells[219, 9]].EntireRow.AutoFit();
+                sheetTPNBU.Range["A1", "I1000"].EntireRow.AutoFit();
 
                 excel.DisplayAlerts = false;
                 newBookTPNBU.SaveAs(@"D:\Учёба\ТПУ\Магистерская диссертация\ИТ\Примеры\ТПНБУnew.xlsx");
