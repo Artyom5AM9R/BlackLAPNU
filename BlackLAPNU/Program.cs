@@ -36,7 +36,7 @@ namespace BlackLAPNU
                 {                    
                     node.GetNameOfLaunchingOrgan(sheetTRP, startingLine, newBookTPNBU.Worksheets["ПО и ПС"]);
 
-                    while (counterScheme < node.GetCountOfParams(sheetTRP, currentLine, (int)ColumnNumberInTRP.LaunchingOrgan))
+                    while (counterScheme < 3/*node.GetCountOfParams(sheetTRP, currentLine, (int)ColumnNumberInTRP.LaunchingOrgan)*/)
                     {
                         var groupCount = node.GetTemperatureGroupCount(sheetTRP, currentLine/*startingLine - 2*/);
                         var counterTempGroup = 0;

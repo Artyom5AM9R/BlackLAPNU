@@ -25,8 +25,19 @@ namespace BlackLAPNU
         /// </summary>
         public string ControlledSection { get; /*private*/ set; }
 
+        /// <summary>
+        /// Влияющий фактор
+        /// </summary>
+        public string InfluencingFactor { get; /*private*/ set; }
+
+        /// <summary>
+        /// Схема сети
+        /// </summary>
         public string SchemeOfNetwork { get; /*private */set; }
 
+        /// <summary>
+        /// Группа уставок по температуре наружного воздуха
+        /// </summary>
         public string TemperatureGroup { get; /*private*/ set; }
 
         /// <summary>
@@ -34,6 +45,9 @@ namespace BlackLAPNU
         /// </summary>
         public List<int> Values { get; /*private */set; } = new List<int>();
 
+        /// <summary>
+        /// Управляющие воздействия
+        /// </summary>
         public string[,] ControlActions { get; /*private */set; }
 
 
@@ -470,6 +484,14 @@ namespace BlackLAPNU
             return shortName;
         }
 
+        private void CheckNetworkScheme(string scheme)
+        {
+            var schemeTmp = @"^[работа|ремонт] [а-я]";
+            var correctScheme = new Regex(schemeTmp);
+            
+
+        }
+
         public void GetNetworkScheme(Worksheet sheetTRP, int startingIndex, Workbook bookTPNBU, List<string> list, 
             List<BlankNode> nodeList, int groupCount)
         {
@@ -486,7 +508,6 @@ namespace BlackLAPNU
                     break;
                 case "нормальная":
                     break;
-
                 default:
                     schemeForTPNBU = GetNameOfWorkingOrRepairScheme(bookTPNBU, scheme) + GetOperationConditions(bookTPNBU) +
                         GetTemperatureGroupName(list, nodeList, bookTPNBU, groupCount) + GetOperatingStatus(bookTPNBU);
@@ -499,7 +520,7 @@ namespace BlackLAPNU
         private string GetNameOfWorkingOrRepairScheme(Workbook bookNPNBU, string scheme)
         {
             string newScheme = "";
-
+            Console.WriteLine("Схема сети на входе: " + scheme);
             while (scheme.Length > 0)
             {
                 switch (scheme.Substring(0, 6))
@@ -507,27 +528,33 @@ namespace BlackLAPNU
                     case "ремонт":
                         newScheme = newScheme + "Откл";
                         scheme = scheme.Remove(0, 7);
+                        Console.WriteLine("ремонт");
                         break;
                     case "работа":
                         newScheme = newScheme + "Вкл";
                         scheme = scheme.Remove(0, 7);
+                        Console.WriteLine("работа");
                         break;
+                    default:
+                        throw new Exception("В описании схемы сети отсутствуют ключевые слова 'ремонт/работа'.");
                 }
                 Console.WriteLine("Схема сети начало - " + scheme);
                 var conditionIndex = 0;
                 
                 if (scheme.IndexOf(" и ") >= 0)
                 {
-                    Console.WriteLine("No");
+                    Console.WriteLine("Yes");
                     conditionIndex = scheme.IndexOf(" и ");
                     Console.WriteLine(conditionIndex);
                     Console.WriteLine("Поиск - " + scheme);
-                    newScheme = newScheme + $"({FindShortNameOfLine(scheme.Substring(0, conditionIndex - 1), bookNPNBU)})";
-                    scheme = scheme.Remove(0, conditionIndex + 1);
+                    newScheme = newScheme + $"({FindShortNameOfLine(scheme.Substring(0, conditionIndex), bookNPNBU)}) и ";
+                    Console.WriteLine("newScheme: " + newScheme);
+                    scheme = scheme.Remove(0, conditionIndex + 3);
+                    Console.WriteLine("scheme: " + scheme);
                 }
                 else
                 {
-                    Console.WriteLine("Yes");
+                    Console.WriteLine("No");
                     Console.WriteLine("Поиск - " + scheme);
                     newScheme = newScheme + $"({FindShortNameOfLine(scheme, bookNPNBU)})";
                     scheme = "";
@@ -560,7 +587,7 @@ namespace BlackLAPNU
         }
 
         /// <summary>
-        /// Метод для получения количества записей нижнего уровня, относящихся к записи верхнего уровнять
+        /// Метод для получения количества записей нижнего уровня, относящихся к записи верхнего уровня
         /// </summary>
         /// <param name="sheetTRP"></param>
         /// <param name="startLine"></param>
@@ -627,5 +654,13 @@ namespace BlackLAPNU
             return RowsCount + 1;
         }
 
+        /// <summary>
+        /// Метод для получения влияющих факторов
+        /// </summary>
+        /// <returns></returns>
+        public string GetInfluencingFactor()
+        {
+
+        }
     }
 }
