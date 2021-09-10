@@ -33,11 +33,16 @@ namespace BlackLAPNU
                 var tempGroupList = node.GetListOfTemperatureGroups(sheetTRP, startingLine);
 
                 while (counterLO < node.GetCountOfLaunchingOrgan(sheetTRP, startingLine))
-                {                    
-                    node.GetNameOfLaunchingOrgan(sheetTRP, startingLine, newBookTPNBU.Worksheets["ПО и ПС"]);
+                {
+                    Console.WriteLine("Количество ПО - " + node.GetCountOfLaunchingOrgan(sheetTRP, startingLine));
+                    node.GetNameOfLaunchingOrgan(sheetTRP, currentLine, newBookTPNBU.Worksheets["ПО и ПС"]);
+                    Console.WriteLine("counterScheme = " + counterScheme);
+                    Console.WriteLine(node.GetCountOfParams(sheetTRP, currentLine, (int)ColumnNumberInTRP.LaunchingOrgan, 1));
 
-                    while (counterScheme < 1/*node.GetCountOfParams(sheetTRP, currentLine, (int)ColumnNumberInTRP.LaunchingOrgan)*/)
+                    while (counterScheme < node.GetCountOfParams(sheetTRP, currentLine, (int)ColumnNumberInTRP.LaunchingOrgan, 1))
                     {
+                        //Console.ReadKey();
+                        Console.WriteLine("ИХАЕМ!!!");
                         var groupCount = node.GetTemperatureGroupCount(sheetTRP, currentLine/*startingLine - 2*/);
                         var counterTempGroup = 0;
 
@@ -46,7 +51,7 @@ namespace BlackLAPNU
                         Console.WriteLine("Количество групп - " + groupCount);
                         while (counterTempGroup < groupCount)
                         {
-                            node.GetNetworkScheme(sheetTRP, currentLine, newBookTPNBU, tempGroupList, nodeList, groupCount);
+                            node.GetNetworkScheme(bookTRP, currentLine, newBookTPNBU, tempGroupList, nodeList, groupCount);
 
                             var counterControlledSection = 0;
                             var newCurrentLine = currentLine;
@@ -57,7 +62,6 @@ namespace BlackLAPNU
 
                                 var counterInfluencingFactors = 0;
 
-                                //var newCurrentLine2 = newCurrentLine;
                                 Console.WriteLine($"\nКоличество ВФ - {node.GetCountOfParams(sheetTRP, newCurrentLine, (int)ColumnNumberInTRP.ControlledSection, 1)}\n");
 
                                 while (counterInfluencingFactors < node.GetCountOfParams(sheetTRP, newCurrentLine, (int)ColumnNumberInTRP.ControlledSection, 1))
@@ -65,10 +69,6 @@ namespace BlackLAPNU
                                     node.GetInfluencingFactor(sheetTRP, newCurrentLine);
 
                                     Console.WriteLine("\n\n" + node.InfluencingFactor + "\n\n");
-                                    /*counterInfluencingFactors++;
-                                    
-                                    newCurrentLine2 = newCurrentLine2 + node.GetMergeLineCount(sheetTRP, newCurrentLine2, (int)ColumnNumberInTRP.InfluencingFactors);*/
-
 
                                     var mergeCells = node.GetMergeLineCount(sheetTRP, newCurrentLine, (int)ColumnNumberInTRP.InfluencingFactors);
                                     node.GetValues(sheetTRP, newCurrentLine, mergeCells);
@@ -100,32 +100,7 @@ namespace BlackLAPNU
 
                                 Console.WriteLine($"\nКоличество записей после фиксации сечения - {nodeList.Count}\n");
 
-                                //Console.WriteLine($"\nКОЛИЧЕСТВО ВФ = {node.GetCountOfParams(sheetTRP, currentLine, (int)ColumnNumberInTRP.ControlledSection)}\n\n");
-
-                                /*var mergeCells = node.GetMergeLineCount(sheetTRP, newCurrentLine, (int)ColumnNumberInTRP.ControlledSection);
-                                node.GetValues(sheetTRP, newCurrentLine, mergeCells);
-
-                                node.GetControlActions(newCurrentLine, mergeCells, sheetTRP, newBookTPNBU.Worksheets["УВ"]);
-
-                                newCurrentLine = newCurrentLine + mergeCells;*/
                                 counterControlledSection++;
-
-                                /*nodeList.Add(node);
-
-                                //node.CheckTemperatureGroup(sheetTRP, currentLine, nodeList, tempGroupList, bookTPNBU, groupCount);
-
-                                var POname = node.LaunchingOrganFullName;
-                                var POopname = node.LaunchingOrganOperationName;
-                                var scheme = node.SchemeOfNetwork;
-                                var section = node.ControlledSection;
-                                var temp = node.TemperatureGroup;
-                                
-                                node = new BlankNode();
-                                node.LaunchingOrganFullName = POname;
-                                node.LaunchingOrganOperationName = POopname;
-                                node.SchemeOfNetwork = scheme;
-                                node.ControlledSection = section;
-                                node.TemperatureGroup = temp;*/
                             }
 
                             var copyList = new List<BlankNode>();
@@ -179,7 +154,7 @@ namespace BlackLAPNU
                                     Console.WriteLine(blankNode.ControlActions);
                                     Console.WriteLine("ДО: " + nodeList[nodeList.Count - 1].SchemeOfNetwork.ToString());
                                     
-                                    blankNode.GetNetworkScheme(sheetTRP, currentLine, newBookTPNBU, tempGroupList, nodeList, groupCount);
+                                    blankNode.GetNetworkScheme(bookTRP, currentLine, newBookTPNBU, tempGroupList, nodeList, groupCount);
                                     Console.WriteLine("ПОСЛЕ: " + nodeList[nodeList.Count - 1].SchemeOfNetwork.ToString());
                                     Console.WriteLine("Новая схема: " + blankNode.SchemeOfNetwork);
                                     Console.WriteLine("\ncopyListCount = " + copyList.Count);
@@ -218,7 +193,8 @@ namespace BlackLAPNU
 
                         counterScheme++;
                     }
-
+                    counterScheme = 0;
+                    Console.WriteLine("currentLine = " + currentLine);
                     counterLO++;
                 }
 

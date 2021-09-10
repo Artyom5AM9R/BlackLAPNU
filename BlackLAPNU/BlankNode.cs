@@ -61,12 +61,13 @@ namespace BlackLAPNU
         {
             LaunchingOrganFullName = worksheetTRP.Cells[startingIndex, 2].Value;
             int indexOfEnd = LaunchingOrganFullName.IndexOf("(") - 1;
-
+            Console.WriteLine("LaunchingOrganFullName - " + LaunchingOrganFullName);
             for (int i = 1; i <= worksheetTPNBU.Rows.Count; i++)
             {
                 if (worksheetTPNBU.Cells[i, 1].Value == LaunchingOrganFullName.Substring(0, indexOfEnd))
                 {
                     LaunchingOrganOperationName = worksheetTPNBU.Cells[i, 2].Value;
+                    Console.WriteLine("LaunchingOrganOperationName - " + LaunchingOrganOperationName);
                     break;
                 }
             }         
@@ -488,37 +489,126 @@ namespace BlackLAPNU
             return shortName;
         }
 
+        /// <summary>
+        /// Метод для проверки корректности задания схемы сети
+        /// </summary>
+        /// <param name="scheme"></param>
         private void CheckNetworkScheme(string scheme)
         {
-            var schemeTmp = @"^[работа|ремонт] [а-я]";
-            var correctScheme = new Regex(schemeTmp);
+            scheme = scheme.ToLower();
+            var schemeTmp = @"^ремонт|работа [а-яёa-z0-9\–\№\ ]{1,100}$";/* [а-яёa-z0-9–№]{1,100}$*/
+            var correctSchemeRegex = new Regex(schemeTmp);
             
+            while (!string.IsNullOrEmpty(scheme))
+            {
+                string partOfScheme;
+
+                if (scheme.Contains(" и "))
+                {
+                    partOfScheme = scheme.Substring(0, scheme.IndexOf(" и "));
+                }
+                else
+                {
+                    partOfScheme = scheme;
+                }
+
+                if (!correctSchemeRegex.IsMatch(partOfScheme))
+                {
+                    throw new Exception($"Ошибка при задании схемы сети: {partOfScheme}");
+                }
+
+                if (scheme.Contains(" и "))
+                {
+                    scheme = scheme.Remove(0, scheme.IndexOf(" и ") + 3);
+                }
+                else
+                {
+                    scheme = "";
+                }
+            }
 
         }
 
-        public void GetNetworkScheme(Worksheet sheetTRP, int startingIndex, Workbook bookTPNBU, List<string> list, 
+        public void GetNetworkScheme(Workbook bookTRP, int startingIndex, Workbook bookTPNBU, List<string> list, 
             List<BlankNode> nodeList, int groupCount)
         {
-            //Console.WriteLine("startingIndex = " + startingIndex);
-            var scheme = sheetTRP.Cells[startingIndex, 3].Value.ToString().ToLower();
+            var scheme = bookTRP.Worksheets["Настройка ПО"].Cells[startingIndex, 3].Value.ToString().ToLower();
             Console.WriteLine("scheme: " + scheme);
-            var schemeForTPNBU = "";
 
             switch(scheme)
             {
                 case "любая":
-                    schemeForTPNBU = GetOperationConditions(bookTPNBU) + GetTemperatureGroupName(list, nodeList, bookTPNBU, groupCount)
+                    SchemeOfNetwork = GetOperationConditions(bookTPNBU) + GetTemperatureGroupName(list, nodeList, bookTPNBU, groupCount)
                         + GetOperatingStatus(bookTPNBU);
                     break;
                 case "нормальная":
+                    var row = bookTRP.Worksheets["Нормальная схема"].Cells.Find("нормальная").Row;
+                    scheme = bookTRP.Worksheets["Нормальная схема"].Cells[row, 2].Value;
+
+                    CheckNetworkScheme(scheme);
+                    var secondaryScheme2 = "";
+
+                    while (!string.IsNullOrEmpty(scheme))
+                    {
+                        string partOfScheme;
+
+                        if (scheme.Contains(" и "))
+                        {
+                            partOfScheme = scheme.Substring(0, scheme.IndexOf(" и "));
+                        }
+                        else
+                        {
+                            partOfScheme = scheme;
+                        }
+
+                        if (scheme.Contains(" и "))
+                        {
+                            scheme = scheme.Remove(0, scheme.IndexOf(" и ") + 3);
+                        }
+                        else
+                        {
+                            scheme = "";
+                        }
+
+                        secondaryScheme2 = secondaryScheme2 + GetNameOfWorkingOrRepairScheme(bookTPNBU, partOfScheme);
+                    }
+
+                    SchemeOfNetwork = secondaryScheme2 + GetOperationConditions(bookTPNBU) +
+                        GetTemperatureGroupName(list, nodeList, bookTPNBU, groupCount) + GetOperatingStatus(bookTPNBU);
                     break;
                 default:
-                    schemeForTPNBU = GetNameOfWorkingOrRepairScheme(bookTPNBU, scheme) + GetOperationConditions(bookTPNBU) +
+                    CheckNetworkScheme(scheme);
+                    var secondaryScheme = "";
+
+                    while (!string.IsNullOrEmpty(scheme))
+                    {
+                        string partOfScheme;
+
+                        if (scheme.Contains(" и "))
+                        {
+                            partOfScheme = scheme.Substring(0, scheme.IndexOf(" и "));
+                        }
+                        else
+                        {
+                            partOfScheme = scheme;
+                        }
+
+                        if (scheme.Contains(" и "))
+                        {
+                            scheme = scheme.Remove(0, scheme.IndexOf(" и ") + 3);
+                        }
+                        else
+                        {
+                            scheme = "";
+                        }
+
+                        secondaryScheme = secondaryScheme + GetNameOfWorkingOrRepairScheme(bookTPNBU, partOfScheme);
+                    }
+
+                    SchemeOfNetwork = secondaryScheme + GetOperationConditions(bookTPNBU) +
                         GetTemperatureGroupName(list, nodeList, bookTPNBU, groupCount) + GetOperatingStatus(bookTPNBU);
                     break;
             }
-
-            SchemeOfNetwork = schemeForTPNBU;
         }
 
         private string GetNameOfWorkingOrRepairScheme(Workbook bookNPNBU, string scheme)
@@ -527,7 +617,7 @@ namespace BlackLAPNU
             Console.WriteLine("Схема сети на входе: " + scheme);
             while (scheme.Length > 0)
             {
-                switch (scheme.Substring(0, 6))
+                switch (scheme.ToLower().Substring(0, 6))
                 {
                     case "ремонт":
                         newScheme = newScheme + "Откл";
@@ -576,15 +666,15 @@ namespace BlackLAPNU
         /// <returns></returns>
         public int GetCountOfLaunchingOrgan(Worksheet sheetTRP, int startLine)
         {
-            var rowCount = sheetTRP.Cells[startLine, 2].MergeArea.Count;
+            var rowCount = Find(sheetTRP) - startLine/*sheetTRP.Cells[startLine, 2].MergeArea.Count*/;
             var counter = 0;
 
             for (int i = startLine; i < startLine + rowCount;)
             {
                 counter++;
-                var contolSectionMergeCells = sheetTRP.Cells[i, 2].MergeArea.Count;
+                var mergeCells = sheetTRP.Cells[i, 2].MergeArea.Count;
 
-                i = i + contolSectionMergeCells;
+                i = i + mergeCells;
             }
 
             return counter;
@@ -634,6 +724,7 @@ namespace BlackLAPNU
                 if (sheet.Cells[i, 2].Value.ToString().Contains("Автоматика"))
                 {
                     index = i;
+                    break;
                 }
 
                 if (sheet.Cells[i, 2].MergeCells)
@@ -674,41 +765,41 @@ namespace BlackLAPNU
                 @"^P.[а-яёА-ЯЁ]{1,13} [=,>,<,≥,≤]{1} [0-9]{3,5}$"
             };
 
-            string parthOfFactor;
+            string partOfFactor;
             var fullFactor = "";
 
             while (!string.IsNullOrEmpty(inputFactor))
             {
                 if (inputFactor.Contains(" и "))
                 {
-                    parthOfFactor = inputFactor.Substring(0, inputFactor.IndexOf(" и "));
+                    partOfFactor = inputFactor.Substring(0, inputFactor.IndexOf(" и "));
                 }
                 else
                 {
-                    parthOfFactor = inputFactor;
+                    partOfFactor = inputFactor;
                 }
 
-                switch (parthOfFactor)
+                switch (partOfFactor)
                 {
                     case "–":
-                        parthOfFactor = "";
+                        partOfFactor = "";
                         break;
                     default:
-                        var fallsCount = 0;
+                        var fallsCounter = 0;
 
                         foreach (string template in factorTmpList)
                         {
-                            Regex factorRegex = new Regex(template);
+                            var factorRegex = new Regex(template);
 
-                            if (!factorRegex.IsMatch(parthOfFactor))
+                            if (!factorRegex.IsMatch(partOfFactor))
                             {
-                                fallsCount++;
+                                fallsCounter++;
                             }
                         }
 
-                        if (fallsCount == factorTmpList.Count)
+                        if (fallsCounter == factorTmpList.Count)
                         {
-                            throw new Exception($"Ошибка при указании названия влияющего фактора: {parthOfFactor}");
+                            throw new Exception($"Ошибка при указании названия влияющего фактора: {partOfFactor}");
                         }
 
                         break;
@@ -716,12 +807,12 @@ namespace BlackLAPNU
 
                 if (inputFactor.Contains(" и "))
                 {
-                    fullFactor = fullFactor + parthOfFactor + " и ";
+                    fullFactor = fullFactor + partOfFactor + " и ";
                     inputFactor = inputFactor.Remove(0, inputFactor.IndexOf(" и ") + 3);
                 }
                 else
                 {
-                    fullFactor = fullFactor + parthOfFactor;
+                    fullFactor = fullFactor + partOfFactor;
                     inputFactor = "";
                 }
             }
