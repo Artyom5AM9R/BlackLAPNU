@@ -12,7 +12,7 @@ namespace BlackLAPNU
         public static void Main(string[] args)
         {
             var excel = new Application();
-            var bookTRP = excel.Workbooks.Open(@"D:\Учёба\ТПУ\Магистерская диссертация\ИТ\Примеры\ТРП1.xlsx");
+            var bookTRP = excel.Workbooks.Open(@"D:\Учёба\ТПУ\Магистерская диссертация\ИТ\Примеры\ТРП.xlsx");
             var bookTPNBU = excel.Workbooks.Open(@"D:\Учёба\ТПУ\Магистерская диссертация\ИТ\Примеры\ТПНБУ.xlsx");
             var newBookTPNBU = bookTPNBU;
 
@@ -36,7 +36,7 @@ namespace BlackLAPNU
                 {                    
                     node.GetNameOfLaunchingOrgan(sheetTRP, startingLine, newBookTPNBU.Worksheets["ПО и ПС"]);
 
-                    while (counterScheme < 3/*node.GetCountOfParams(sheetTRP, currentLine, (int)ColumnNumberInTRP.LaunchingOrgan)*/)
+                    while (counterScheme < 1/*node.GetCountOfParams(sheetTRP, currentLine, (int)ColumnNumberInTRP.LaunchingOrgan)*/)
                     {
                         var groupCount = node.GetTemperatureGroupCount(sheetTRP, currentLine/*startingLine - 2*/);
                         var counterTempGroup = 0;
@@ -51,19 +51,66 @@ namespace BlackLAPNU
                             var counterControlledSection = 0;
                             var newCurrentLine = currentLine;
 
-                            while (counterControlledSection < node.GetCountOfParams(sheetTRP, currentLine, (int)ColumnNumberInTRP.SchemeOfTheNetwork))
+                            while (counterControlledSection < node.GetCountOfParams(sheetTRP, currentLine, (int)ColumnNumberInTRP.SchemeOfTheNetwork, 1))
                             {
                                 node.GetControlledSection(sheetTRP, newCurrentLine, newBookTPNBU.Worksheets["Сечения"], node);
 
-                                var mergeCells = node.GetMergeLineCount(sheetTRP, newCurrentLine, (int)ColumnNumberInTRP.ControlledSection);
+                                var counterInfluencingFactors = 0;
+
+                                //var newCurrentLine2 = newCurrentLine;
+                                Console.WriteLine($"\nКоличество ВФ - {node.GetCountOfParams(sheetTRP, newCurrentLine, (int)ColumnNumberInTRP.ControlledSection, 1)}\n");
+
+                                while (counterInfluencingFactors < node.GetCountOfParams(sheetTRP, newCurrentLine, (int)ColumnNumberInTRP.ControlledSection, 1))
+                                {
+                                    node.GetInfluencingFactor(sheetTRP, newCurrentLine);
+
+                                    Console.WriteLine("\n\n" + node.InfluencingFactor + "\n\n");
+                                    /*counterInfluencingFactors++;
+                                    
+                                    newCurrentLine2 = newCurrentLine2 + node.GetMergeLineCount(sheetTRP, newCurrentLine2, (int)ColumnNumberInTRP.InfluencingFactors);*/
+
+
+                                    var mergeCells = node.GetMergeLineCount(sheetTRP, newCurrentLine, (int)ColumnNumberInTRP.InfluencingFactors);
+                                    node.GetValues(sheetTRP, newCurrentLine, mergeCells);
+
+                                    node.GetControlActions(newCurrentLine, mergeCells, sheetTRP, newBookTPNBU.Worksheets["УВ"]);
+
+                                    newCurrentLine = newCurrentLine + mergeCells;
+                                    counterInfluencingFactors++;
+
+                                    nodeList.Add(node);
+
+                                    //node.CheckTemperatureGroup(sheetTRP, currentLine, nodeList, tempGroupList, bookTPNBU, groupCount);
+
+                                    var POname = node.LaunchingOrganFullName;
+                                    var POopname = node.LaunchingOrganOperationName;
+                                    var scheme = node.SchemeOfNetwork;
+                                    var section = node.ControlledSection;
+                                    var factor = node.InfluencingFactor;
+                                    var temp = node.TemperatureGroup;
+
+                                    node = new BlankNode();
+                                    node.LaunchingOrganFullName = POname;
+                                    node.LaunchingOrganOperationName = POopname;
+                                    node.SchemeOfNetwork = scheme;
+                                    node.ControlledSection = section;
+                                    node.InfluencingFactor = factor;
+                                    node.TemperatureGroup = temp;
+                                }
+
+                                Console.WriteLine($"\nКоличество записей после фиксации сечения - {nodeList.Count}\n");
+
+                                //Console.WriteLine($"\nКОЛИЧЕСТВО ВФ = {node.GetCountOfParams(sheetTRP, currentLine, (int)ColumnNumberInTRP.ControlledSection)}\n\n");
+
+                                /*var mergeCells = node.GetMergeLineCount(sheetTRP, newCurrentLine, (int)ColumnNumberInTRP.ControlledSection);
                                 node.GetValues(sheetTRP, newCurrentLine, mergeCells);
 
                                 node.GetControlActions(newCurrentLine, mergeCells, sheetTRP, newBookTPNBU.Worksheets["УВ"]);
 
-                                newCurrentLine = newCurrentLine + mergeCells;
+                                newCurrentLine = newCurrentLine + mergeCells;*/
                                 counterControlledSection++;
 
-                                nodeList.Add(node);
+                                /*nodeList.Add(node);
 
                                 //node.CheckTemperatureGroup(sheetTRP, currentLine, nodeList, tempGroupList, bookTPNBU, groupCount);
 
@@ -78,7 +125,7 @@ namespace BlackLAPNU
                                 node.LaunchingOrganOperationName = POopname;
                                 node.SchemeOfNetwork = scheme;
                                 node.ControlledSection = section;
-                                node.TemperatureGroup = temp;
+                                node.TemperatureGroup = temp;*/
                             }
 
                             var copyList = new List<BlankNode>();
@@ -90,7 +137,8 @@ namespace BlackLAPNU
                                 Console.WriteLine("Количество объединенных ячеек - " + sheetTRP.Cells[currentLine, columnIndex].MergeArea.Count);
                                 while (cnt < sheetTRP.Cells[currentLine, columnIndex].MergeArea.Count - 1)
                                 {
-                                    var countCells = nodeList.Count - node.GetCountOfParams(sheetTRP, currentLine, (int)ColumnNumberInTRP.SchemeOfTheNetwork);
+                                    //Console.WriteLine($"\n\ncurrentLine = {currentLine}\n\n");
+                                    var countCells = nodeList.Count - node.GetCountOfParams(sheetTRP, currentLine, (int)ColumnNumberInTRP.SchemeOfTheNetwork, 2);
                                     Console.WriteLine("\ncountCells = " + countCells);
                                     Console.WriteLine("nodeListCells = " + nodeList.Count);
                                     for (int i = countCells; i < nodeList.Count; i++)
@@ -101,6 +149,7 @@ namespace BlackLAPNU
                                         blank.LaunchingOrganOperationName = nodeList[i].LaunchingOrganOperationName;
                                         blank.SchemeOfNetwork = nodeList[i].SchemeOfNetwork;
                                         blank.ControlledSection = nodeList[i].ControlledSection;
+                                        blank.InfluencingFactor = nodeList[i].InfluencingFactor;
                                         blank.Values = nodeList[i].Values;
                                         blank.ControlActions = nodeList[i].ControlActions;
                                         copyList.Add(blank);
@@ -135,7 +184,7 @@ namespace BlackLAPNU
                                     Console.WriteLine("Новая схема: " + blankNode.SchemeOfNetwork);
                                     Console.WriteLine("\ncopyListCount = " + copyList.Count);
 
-                                    var newCountCells = copyList.Count - node.GetCountOfParams(sheetTRP, currentLine, (int)ColumnNumberInTRP.SchemeOfTheNetwork);
+                                    var newCountCells = copyList.Count - node.GetCountOfParams(sheetTRP, currentLine, (int)ColumnNumberInTRP.SchemeOfTheNetwork, 2);
 
                                     for (int i = newCountCells; i < copyList.Count; i++)
                                     {
@@ -152,7 +201,7 @@ namespace BlackLAPNU
                                         nodeList.Add(copyList[i]);
                                         Console.WriteLine("nodeListCells = " + nodeList.Count);
 
-                                        newLine = newLine + node.GetMergeLineCount(sheetTRP, newLine, (int)ColumnNumberInTRP.ControlledSection);
+                                        newLine = newLine + node.GetMergeLineCount(sheetTRP, newLine, (int)ColumnNumberInTRP.SchemeOfTheNetwork);
                                     }
                                     Console.WriteLine("AFTER - " + nodeList.Count);
                                     columnIndex++;
@@ -183,12 +232,14 @@ namespace BlackLAPNU
                     WriteInTPNBU(nod.LaunchingOrganOperationName, sheetTPNBU, line, nod.Values.Count - 1, GetColumn(ColumnNumber.LaunchingOrganOperationName));
                     WriteInTPNBU(nod.ControlledSection, sheetTPNBU, line, nod.Values.Count - 1, GetColumn(ColumnNumber.ControlledSection));
                     WriteInTPNBU(nod.SchemeOfNetwork, sheetTPNBU, line, nod.Values.Count - 1, GetColumn(ColumnNumber.SchemeOfTheNetwork));
+                    WriteInTPNBU(nod.InfluencingFactor, sheetTPNBU, line, nod.Values.Count - 1, GetColumn(ColumnNumber.EquipmentCondition));
                     
                     var k = 0;
 
                     foreach (var value in nod.Values)
                     {
                         WriteInTPNBU(value, sheetTPNBU, line + k, 0, GetColumn(ColumnNumber.Values));
+                        WriteInTPNBU("", sheetTPNBU, line + k, 0, GetColumn(ColumnNumber.ControlActionAdditional));
                         k++;
                     }
                     

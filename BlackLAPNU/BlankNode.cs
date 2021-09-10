@@ -157,7 +157,7 @@ namespace BlackLAPNU
         /// <summary>
         /// Метод для получения значений уставок
         /// </summary>
-        public void GetValues(Worksheet sheetTRP, int startingIndex, int countOfMergeCellsInConrolledSection)
+        public void GetValues(Worksheet sheetTRP, int startingIndex, int countOfMergeCellsInInfluencingFactor)
         {
             Values.Clear();
             Console.WriteLine("tempGroup - " + TemperatureGroup);
@@ -183,7 +183,11 @@ namespace BlackLAPNU
                 Console.ReadKey();
             }*/
 
-            var tmpValues = sheetTRP.Range[sheetTRP.Cells[startingIndex, column], sheetTRP.Cells[startingIndex + countOfMergeCellsInConrolledSection - 1, column]].Value;
+            Console.WriteLine($"\nНачальная строка - {startingIndex}");
+            Console.WriteLine($"Количество объединенных строк - {countOfMergeCellsInInfluencingFactor}");
+            Console.WriteLine($"Объединить по следующую строку - {startingIndex + countOfMergeCellsInInfluencingFactor - 1}\n");
+
+            var tmpValues = sheetTRP.Range[sheetTRP.Cells[startingIndex, column], sheetTRP.Cells[startingIndex + countOfMergeCellsInInfluencingFactor - 1, column]].Value;
 
             foreach (var value in tmpValues)
             {
@@ -592,18 +596,20 @@ namespace BlackLAPNU
         /// <param name="sheetTRP"></param>
         /// <param name="startLine"></param>
         /// <param name="column"></param>
+        /// <param name="step"></param>
         /// <returns></returns>
-        public int GetCountOfParams(Worksheet sheetTRP, int startLine, int column)
+        public int GetCountOfParams(Worksheet sheetTRP, int startLine, int column, int step)
         {
             var rowCount = sheetTRP.Cells[startLine, column].MergeArea.Count;
             var counter = 0;
 
             for (int i = startLine; i < startLine + rowCount;)
             {
+                Console.WriteLine($"\n\ni = {i}\n\n");
                 counter++;
-                var contolSectionMergeCells = sheetTRP.Cells[i, column + 1].MergeArea.Count;
+                var countOfMergeCells = sheetTRP.Cells[i, column + step].MergeArea.Count;
 
-                i = i + contolSectionMergeCells;
+                i = i + countOfMergeCells;
             }
 
             return counter;
@@ -658,9 +664,69 @@ namespace BlackLAPNU
         /// Метод для получения влияющих факторов
         /// </summary>
         /// <returns></returns>
-        public string GetInfluencingFactor()
+        public void GetInfluencingFactor(Worksheet sheetTRP, int line)
         {
+            var inputFactor = sheetTRP.Cells[line, 5].Value;
 
+            var factorTmpList = new List<string>()
+            {
+                @"^ГГ.[а-яёА-ЯЁ]{1,13} [=,>,<,≥,≤]{1} [0-9]{1,2}$",
+                @"^P.[а-яёА-ЯЁ]{1,13} [=,>,<,≥,≤]{1} [0-9]{3,5}$"
+            };
+
+            string parthOfFactor;
+            var fullFactor = "";
+
+            while (!string.IsNullOrEmpty(inputFactor))
+            {
+                if (inputFactor.Contains(" и "))
+                {
+                    parthOfFactor = inputFactor.Substring(0, inputFactor.IndexOf(" и "));
+                }
+                else
+                {
+                    parthOfFactor = inputFactor;
+                }
+
+                switch (parthOfFactor)
+                {
+                    case "–":
+                        parthOfFactor = "";
+                        break;
+                    default:
+                        var fallsCount = 0;
+
+                        foreach (string template in factorTmpList)
+                        {
+                            Regex factorRegex = new Regex(template);
+
+                            if (!factorRegex.IsMatch(parthOfFactor))
+                            {
+                                fallsCount++;
+                            }
+                        }
+
+                        if (fallsCount == factorTmpList.Count)
+                        {
+                            throw new Exception($"Ошибка при указании названия влияющего фактора: {parthOfFactor}");
+                        }
+
+                        break;
+                }
+
+                if (inputFactor.Contains(" и "))
+                {
+                    fullFactor = fullFactor + parthOfFactor + " и ";
+                    inputFactor = inputFactor.Remove(0, inputFactor.IndexOf(" и ") + 3);
+                }
+                else
+                {
+                    fullFactor = fullFactor + parthOfFactor;
+                    inputFactor = "";
+                }
+            }
+
+            InfluencingFactor = fullFactor;
         }
     }
 }
